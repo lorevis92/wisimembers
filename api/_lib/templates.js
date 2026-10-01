@@ -43,7 +43,7 @@ export const T = {
       title: 'Benvenuto nel WiSiVERSE',
       intro: 'Grazie per il tuo ordine. Il pezzo è in preparazione e nel frattempo puoi già entrare nella community con questo codice personale.',
       blocks: list(titles) + codeBox(code) +
-        '<p style="margin:0;font-size:13px;color:#666;">Il codice funziona una sola volta, con questo indirizzo email. Dopo l\'ingresso accedi con un link che ricevi per email, senza password.</p>',
+        '<p style="margin:0;font-size:13px;color:#666;">Il codice funziona una sola volta, con questo indirizzo email. Al primo ingresso scegli una password: le volte dopo entri con email e password.</p>',
       cta: { label: 'Entra con il codice', url: `${siteUrl}/?code=${encodeURIComponent(code)}` },
     }),
   }),

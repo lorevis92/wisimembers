@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api, DEMO } from './lib/api.js';
 import { Avatar, Loading, Logo, Toaster } from './components/ui.jsx';
 import { levelFor } from '../shared/levels.js';
-import Login from './views/Login.jsx';
+import Login, { NewPassword } from './views/Login.jsx';
 import Feed from './views/Feed.jsx';
 import Registry from './views/Registry.jsx';
 import Series from './views/Series.jsx';
@@ -38,6 +38,8 @@ export default function App() {
   const [boot, setBoot] = useState(false);
   const [session, setSession] = useState(null);
   const [data, setData] = useState(null); // loadMe
+  const [loadedFor, setLoadedFor] = useState(null); // utente di cui è già stato caricato il profilo
+  const [recovery, setRecovery] = useState(api.recovery.pending); // ritorno da «Password dimenticata»
   const [servers, setServers] = useState([]);
   const [people, setPeople] = useState([]);
   const [srvId, setSrvId] = useState(null);
@@ -53,20 +55,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    let off = api.onAuth((s) => setSession(s));
+    let off = api.onAuth((s, event) => {
+      setSession(s);
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+    });
     api.getSession().then(async (s) => {
       setSession(s);
       if (s) await loadAll().catch(() => null);
+      setLoadedFor(s?.user?.id || null);
       setBoot(true);
     });
     return off;
   }, [loadAll]);
 
+  const userId = session?.user?.id || null;
   useEffect(() => {
-    if (session && boot) loadAll().catch(() => null);
-    if (!session) setData(null);
+    if (session && boot) loadAll().catch(() => null).finally(() => setLoadedFor(userId));
+    if (!session) {
+      setData(null);
+      setLoadedFor(null);
+    }
     // eslint-disable-next-line
-  }, [session?.user?.id]);
+  }, [userId]);
 
   const profile = data?.profile || null;
   useEffect(() => {
@@ -83,8 +93,10 @@ export default function App() {
     // eslint-disable-next-line
   }, [profile?.id]);
 
-  if (!boot) return <div className="shell"><Loading /></div>;
-  if (!session || !profile) return <Login session={session} />;
+  // Dopo il login il profilo si carica un attimo dopo la sessione: nel frattempo niente schermata del codice.
+  if (!boot || (session && loadedFor !== userId)) return <div className="shell"><Loading /></div>;
+  if (session && recovery) return <NewPassword onDone={() => setRecovery(false)} />;
+  if (!session || !profile) return <Login session={session} onJoined={loadAll} />;
 
   const me = profile;
   const counts = data.counts;

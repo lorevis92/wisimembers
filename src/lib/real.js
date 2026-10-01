@@ -1,5 +1,5 @@
 // Implementazione reale: Supabase (database, auth, storage) + funzioni /api su Vercel.
-import { supabase } from './supabase.js';
+import { supabase, RECOVERY_RETURN, RECOVERY_EXPIRED } from './supabase.js';
 import { shrinkImage } from './util.js';
 
 async function post(path, payload) {
@@ -23,6 +23,25 @@ const must = ({ data, error }) => {
   if (error) throw new Error(error.message);
   return data;
 };
+
+// Errori di Supabase Auth, in italiano.
+const AUTH_ERRORS = {
+  invalid_credentials: 'Email o password non corretta.',
+  email_not_confirmed: 'Questa email non è ancora confermata: usa «Password dimenticata» per confermarla e scegliere una password.',
+  user_banned: 'Questo account è stato sospeso.',
+  weak_password: 'Questa password è troppo debole: usa almeno 8 caratteri, meglio se non comuni.',
+  same_password: 'La nuova password deve essere diversa da quella attuale.',
+  reauthentication_needed: 'Per sicurezza esci, accedi di nuovo e poi riprova.',
+  session_not_found: 'La sessione è scaduta: accedi di nuovo.',
+  over_request_rate_limit: 'Troppi tentativi. Riprova tra qualche minuto.',
+  over_email_send_rate_limit: 'Abbiamo già mandato troppe email a questo indirizzo. Riprova tra qualche minuto.',
+};
+function authError(error) {
+  if (AUTH_ERRORS[error.code]) return new Error(AUTH_ERRORS[error.code]);
+  if (error.status === 429) return new Error(AUTH_ERRORS.over_request_rate_limit);
+  if (!error.status) return new Error('Connessione assente o servizio non raggiungibile. Riprova tra poco.');
+  return new Error('Qualcosa non ha funzionato. Riprova tra poco.');
+}
 
 async function uid() {
   const {
@@ -50,22 +69,39 @@ export const real = {
     return data.session;
   },
   onAuth(cb) {
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => cb(s));
+    const { data } = supabase.auth.onAuthStateChange((e, s) => cb(s, e));
     return () => data.subscription.unsubscribe();
   },
-  async signInEmail(email) {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin, shouldCreateUser: false },
-    });
-    // Per non rivelare quali email esistono, un errore "utente non trovato" viene trattato come successo.
-    if (error && !/signups? not allowed|not found|invalid/i.test(error.message)) throw new Error(error.message);
+  // Ritorno dall'email di recupero: pending = c'è una nuova password da scegliere, expired = link non più valido.
+  recovery: { pending: RECOVERY_RETURN, expired: RECOVERY_EXPIRED },
+  async signIn(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw authError(error);
   },
   async signOut() {
     await supabase.auth.signOut();
   },
-  async redeem({ code, email, nickname }) {
-    return post('/api/redeem', { code, email, nickname });
+  async redeem({ code, email, nickname, password }) {
+    return post('/api/redeem', { code, email, nickname, password });
+  },
+  /** Manda l'email di recupero di Supabase: il link riporta qui, dove si sceglie la nuova password. */
+  async sendPasswordReset(email) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (error) throw authError(error);
+  },
+  async setPassword(password) {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw authError(error);
+  },
+  async changePassword(current, password) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const { error } = await supabase.auth.signInWithPassword({ email: session?.user?.email, password: current });
+    if (error) {
+      throw error.code === 'invalid_credentials' ? new Error('La password attuale non è corretta.') : authError(error);
+    }
+    await real.setPassword(password);
   },
 
   /* ---------- io ---------- */

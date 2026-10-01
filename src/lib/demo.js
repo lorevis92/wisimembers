@@ -121,8 +121,12 @@ export const demo = {
 
   async getSession() { return { demo: true, user: { id: ME.id } }; },
   onAuth() { return () => {}; },
-  async signInEmail() {},
+  recovery: { pending: false, expired: false },
+  async signIn() {},
   async signOut() { window.location.reload(); },
+  async sendPasswordReset() {},
+  async setPassword() {},
+  async changePassword() {},
   async redeem() { return { ok: true, kind: 'purchase' }; },
 
   async loadMe() {
