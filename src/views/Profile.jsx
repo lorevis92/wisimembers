@@ -11,6 +11,14 @@ export default function Profile({ me, counts, badges, onChanged, onOpenPiece }) 
   const patch = async (p, msg) => {
     if (await run(() => api.updateProfile(p), msg)) onChanged();
   };
+  const [pw, setPw] = useState({ current: '', next: '' });
+  const [pwBusy, setPwBusy] = useState(false);
+  const changePw = async (e) => {
+    e.preventDefault();
+    setPwBusy(true);
+    if (await run(() => api.changePassword(pw.current, pw.next), 'Password aggiornata.')) setPw({ current: '', next: '' });
+    setPwBusy(false);
+  };
   const tracks = [
     ['Pezzi in serie', counts.series, 'contano fino a 6'],
     ['Opere originali', counts.originals, 'nella tua collezione'],
@@ -81,6 +89,14 @@ export default function Profile({ me, counts, badges, onChanged, onOpenPiece }) 
           </form>
           <label className="sw"><input type="checkbox" checked={!!me.show_collection} onChange={(e) => patch({ show_collection: e.target.checked })} /> Mostra la mia collezione agli altri membri</label>
           <label className="sw"><input type="checkbox" checked={!!me.public_name} onChange={(e) => patch({ public_name: e.target.checked })} /> Mostra il mio nickname come proprietario nel Registro</label>
+          <div className="sub-h">Cambia password</div>
+          <form onSubmit={changePw}>
+            <div className="row2">
+              <div className="field"><label>Password attuale</label><input type="password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} autoComplete="current-password" required /></div>
+              <div className="field"><label>Nuova password</label><input type="password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} placeholder="Almeno 8 caratteri" minLength={8} maxLength={72} autoComplete="new-password" required /></div>
+            </div>
+            <button className="btn" disabled={pwBusy}>{pwBusy ? 'Un attimo…' : 'Cambia password'}</button>
+          </form>
           <p><button className="btn ghost mini" onClick={() => api.signOut()}>Esci</button></p>
         </div>
       </div>
