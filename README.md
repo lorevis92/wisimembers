@@ -12,7 +12,7 @@ npm run dev
 ## Come funziona, in breve
 
 - **Acquisto su Printful → webhook → codice via email subito**, all'ordine. Il codice `WISI-XXXX-XXXX` vale una volta ed è legato all'email di chi ha comprato. Squarespace non serve per questo.
-- **Entrare**: codice + email + nickname, poi link magico via email. Le volte dopo basta l'email.
+- **Entrare**: la prima volta ci si registra con codice + email + nickname + password (minimo 8 caratteri); senza codice valido non nasce nessun account. Le volte dopo: email e password. L'account Supabase è lo stesso dei giochi: chi ha già un account entra con la sua password di sempre (il codice gli crea solo il profilo membro, la password non viene mai toccata).
 - **Spedizione**: gli aggiornamenti di Printful arrivano al webhook e partono le email di spedizione.
 - **Ritrovamenti**: nella busta di ogni quadro c'è un codice "artwork" (lo generi dallo Studio). Chi lo inserisce carica una foto, tu approvi: diventa proprietario, Ritrovatore e si apre il Circolo.
 - **Passaggi di mano**: il membro li richiede, tu approvi dallo Studio.
@@ -20,13 +20,16 @@ npm run dev
 
 ## Messa online, passo per passo
 
-1. **Supabase** (progetto "wisinvaders"): SQL Editor → esegui in ordine `supabase/migrations/001_members.sql`, `002_seed.sql`, poi `003_first_admin.sql` dopo aver messo la tua email dentro (prima fai un accesso, vedi punto 5). Le tabelle hanno prefisso `wm_` e non toccano quelle dei giochi.
+1. **Supabase** (progetto "wisinvaders"): SQL Editor → esegui in ordine `supabase/migrations/001_members.sql`, `002_seed.sql`, poi `003_first_admin.sql` dopo aver messo la tua email dentro (prima deve esistere il tuo utente, vedi punto 5). Le tabelle hanno prefisso `wm_` e non toccano quelle dei giochi.
 2. **Resend**: crea la chiave API e verifica il dominio da cui mandare (`EMAIL_FROM`).
 3. **GitHub + Vercel**: carica la cartella su un nuovo repo (il file `.gitignore` esclude già i segreti), importalo su Vercel, aggiungi il dominio `members.wisiverse.com`.
 4. **Variabili d'ambiente su Vercel** (copia i nomi da `.env.example`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SHOP_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_EMAIL`, `SITE_URL`, `PRINTFUL_WEBHOOK_SECRET`, `CRON_SECRET`. Poi rifai il deploy.
    **La chiave `SUPABASE_SERVICE_ROLE_KEY` va solo qui, mai nel repo e mai in un file della cartella.**
-5. **Il tuo account admin**: in Supabase → Authentication → Users → "Add user" con la tua email. Poi esegui `003_first_admin.sql` (con la tua email) e accedi dall'app con il link via email.
-6. **Supabase Auth**: Authentication → URL Configuration → Site URL `https://members.wisiverse.com`, e aggiungilo anche tra i Redirect URLs.
+5. **Il tuo account admin**: in Supabase → Authentication → Users → "Add user" con la tua email (se esiste già, per esempio dai giochi, salta questo passaggio). Poi esegui `003_first_admin.sql` (con la tua email). Per entrare: se l'account ha già una password usa quella; se non ne ha una, apri l'app → Accedi → **Password dimenticata**, apri il link che ricevi per email e scegli la password.
+6. **Supabase Auth**:
+   - Authentication → URL Configuration → Site URL `https://members.wisiverse.com`, e aggiungilo anche tra i Redirect URLs: è lì che torna il link di "Password dimenticata" (per le prove in locale aggiungi anche `http://localhost:5173`).
+   - Authentication → Sign In / Providers → Email: il provider Email deve essere attivo, con lunghezza minima della password 8 (o meno). Non servono email di conferma: gli account li crea il server (`api/redeem.js`) già confermati, e solo con un codice valido.
+   - L'unica email che Supabase manda è quella di recupero password (template "Reset Password"). Il servizio email incluso in Supabase ne manda poche all'ora: per l'uso reale imposta un SMTP tuo (Authentication → Emails → SMTP Settings, va bene anche Resend).
 7. **Webhook Printful**: in Printful (Dashboard → Settings → API / Webhooks) oppure con `node scripts/printful-webhook.mjs` (serve `PRINTFUL_API_TOKEN`), registra:
    `https://members.wisiverse.com/api/printful-webhook?token=IL_TUO_PRINTFUL_WEBHOOK_SECRET`
    per gli eventi di ordine creato, spedizione e annullamento.
