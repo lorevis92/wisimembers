@@ -173,7 +173,6 @@ export const demo = {
     if (has) msg.reactions = msg.reactions.filter((r) => !(r.user_id === ME.id && r.emoji === emoji));
     else msg.reactions.push({ emoji, user_id: ME.id });
   },
-  subscribeMessages() { return () => {}; },
   async listPeople() { return PEOPLE; },
 
   async listPieces() { await wait(); return PIECES.map((p) => ({ ...p })); },

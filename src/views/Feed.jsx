@@ -4,6 +4,7 @@ import { Avatar, Loading, run, toast } from '../components/ui.jsx';
 import { fmtDate, relTime } from '../lib/util.js';
 
 const EMOJI = ['❤️', '🔥', '👀', '👍'];
+const POLL_MS = 8000;
 
 export default function Feed({ channel, me }) {
   const [msgs, setMsgs] = useState(null);
@@ -11,21 +12,39 @@ export default function Feed({ channel, me }) {
   const end = useRef(null);
   const canPost = !channel.ro || me.is_admin;
 
-  const load = () =>
+  // quiet: gli aggiornamenti periodici non mostrano l'errore a ogni giro.
+  const load = (quiet) =>
     api
       .listMessages(channel.id)
-      .then((list) => setMsgs(list || []))
+      .then((list) => setMsgs(Array.isArray(list) ? list : []))
       .catch((e) => {
-        toast(`Messaggi non caricati: ${e?.message || e}`);
+        if (!quiet) toast(`Messaggi non caricati: ${e?.message || e}`);
         setMsgs((cur) => cur || []);
       });
   useEffect(() => {
     setMsgs(null);
     load();
-    return api.subscribeMessages(channel.id, load);
+    // Aggiornamento periodico al posto del realtime: ogni 8 secondi, solo a scheda visibile
+    // (e subito quando la scheda torna visibile).
+    const refresh = () => {
+      if (document.visibilityState === 'visible') load(true);
+    };
+    const timer = setInterval(refresh, POLL_MS);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
     // eslint-disable-next-line
   }, [channel.id]);
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [msgs]);
+
+  // Si scende in fondo solo quando arriva un messaggio nuovo, non a ogni aggiornamento periodico.
+  // Corpo tra graffe: scrollIntoView nei browser recenti ritorna una Promise, e un effetto che la
+  // ritorna fa cadere React al giro dopo ("... is not a function" sulla pulizia dell'effetto).
+  const lastId = msgs?.length ? msgs[msgs.length - 1]?.id : null;
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'end' });
+  }, [lastId]);
 
   async function send(e) {
     e.preventDefault();
