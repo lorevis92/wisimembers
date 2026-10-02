@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { artBg, colorFor, initial } from '../lib/util.js';
 
-export const Logo = () => (
-  <div className="logo">
-    <b>WiSiVERSE</b>
-    <span>Members</span>
-  </div>
-);
+/** Logo dell'app (public/logo-members.png). Con onClick diventa il pulsante che riporta all'inizio. */
+export function Logo({ onClick }) {
+  const [broken, setBroken] = useState(false);
+  // Se il file manca resta il nome scritto, non un'immagine rotta.
+  const mark = broken ? <b>WiSiVERSE Members</b> : <img src="/logo-members.png" alt="WiSiVERSE Members" onError={() => setBroken(true)} />;
+  return onClick ? (
+    <button type="button" className="logo" onClick={onClick} title="Torna all'inizio">{mark}</button>
+  ) : (
+    <div className="logo">{mark}</div>
+  );
+}
 
 export const Face = ({ label = 'W' }) => (
   <div className="face lg">

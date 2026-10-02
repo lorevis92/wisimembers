@@ -164,6 +164,11 @@ export default function App() {
     setMode('channel');
     setView('nav');
   };
+  // Clic sul logo: schermata iniziale (primo server, primo canale).
+  const goHome = () => {
+    setOpenPiece(null);
+    if (servers[0]) pickServer(servers[0]);
+  };
   const pickChannel = (c) => {
     setChId(c.id);
     setOpenPiece(null);
@@ -190,7 +195,7 @@ export default function App() {
       {DEMO && <div className="demobar">Modalità demo · dati di prova, niente viene salvato</div>}
       <div className="nav">
         <button className="burger" aria-label="Menu" onClick={() => setView('nav')}>☰</button>
-        <Logo />
+        <Logo onClick={goHome} />
         <div className="auth">
           <span>{me.nickname}</span>
           <button onClick={() => api.signOut()}>Esci</button>
@@ -268,8 +273,8 @@ export default function App() {
         </aside>
       </div>
       <div className="foot">
-        <div className="lw"><span className="lg">Wi<i>Si</i>VERSE</span><span>© WiSiVERSE · Spazio riservato ai membri</span></div>
-        <a href={import.meta.env.VITE_SHOP_URL || 'https://www.wisiverse.com'}>wisiverse.com</a>
+        <div className="lw"><img src="/logo-wisiverse.png" alt="WiSiVERSE" /><span>Part of the WiSiVERSE ecosystem</span></div>
+        <a href={import.meta.env.VITE_SHOP_URL || 'https://www.wisiverse.com'}>wisiverse.com →</a>
       </div>
       <Toaster />
     </div>
