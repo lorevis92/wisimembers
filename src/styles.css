@@ -26,12 +26,13 @@
 }
 *{box-sizing:border-box}
 html,body,#root{height:100%}
-body{margin:0;background:var(--desk);color:var(--fg);font-family:var(--body);font-size:15px;padding-inline:16px;padding-block:14px}
-body{display:flex}
+body{margin:0;background:var(--desk);color:var(--fg);font-family:var(--body);font-size:15px}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 
-.shell{height:100%;width:100%;max-width:1280px;margin:0 auto;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg2)}
+/* A tutto schermo: barra in alto, area di lavoro che riempie l'altezza, piè di pagina in fondo.
+   100dvh segue l'altezza reale su telefono (barre del browser comprese); 100vh resta come riserva. */
+.shell{height:100vh;height:100dvh;width:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--bg2)}
 .nav{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:#fff}
 .burger{display:none;background:#fff;border:1px solid var(--line);border-radius:3px;padding:7px 10px;line-height:1;font-size:16px;color:var(--fg)}
 .logo{display:flex;align-items:baseline;gap:8px;font-family:var(--body);font-weight:800;text-transform:uppercase}
@@ -268,7 +269,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--primary);outlin
 @media (max-width:759px){.burger{display:block}.foot{display:none}}
 
 /* ===== Aggiunte per l'app reale ===== */
-.login{min-height:100%;display:grid;place-items:center;padding-block:24px}
+.login{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
 .login-card{width:100%;max-width:440px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:28px 24px}
 .login h1{font-family:var(--display);font-size:26px;margin:16px 0 6px;line-height:1.2;text-wrap:balance}
 .login .lead{margin:0 0 4px}
@@ -316,5 +317,5 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--primary);outlin
 .list-clean{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
 .list-clean li{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--line);border-radius:6px;padding:10px 14px;flex-wrap:wrap}
 .list-clean small{display:block;color:var(--fg2);font-size:12.5px;margin-top:2px}
-@media (max-width:520px){.auth span{display:none}.logo span{display:none}body{padding-inline:8px;padding-block:8px}}
+@media (max-width:520px){.auth span{display:none}.logo span{display:none}.login{padding-inline:8px}}
 .shell{min-width:0}
