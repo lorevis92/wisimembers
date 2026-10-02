@@ -160,8 +160,8 @@ export const real = {
 
   /* ---------- struttura e chat ---------- */
   async loadStructure() {
-    const servers = must(await supabase.from('wm_servers').select('*').order('position'));
-    const channels = must(await supabase.from('wm_channels').select('*').order('position'));
+    const servers = must(await supabase.from('wm_servers').select('*').order('position')) || [];
+    const channels = must(await supabase.from('wm_channels').select('*').order('position')) || [];
     return servers.map((s) => {
       const cats = [];
       channels

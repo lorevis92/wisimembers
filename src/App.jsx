@@ -23,6 +23,18 @@ const StudioIcon = () => (
   <svg viewBox="0 0 24 24"><path d="M4 20l4-1 10-10-3-3L5 16l-1 4z" /><path d="M14 7l3 3" /></svg>
 );
 
+// Le risposte di Supabase vengono ripulite prima di arrivare al rendering: mai null o oggetti al posto di liste.
+const list = (x) => (Array.isArray(x) ? x : []);
+const cleanServers = (servers) =>
+  list(servers)
+    .filter((s) => s && s.id)
+    .map((s) => ({
+      ...s,
+      categories: list(s.categories)
+        .filter(Boolean)
+        .map((c) => ({ ...c, name: c.name || 'Canali', channels: list(c.channels).filter((k) => k && k.id) })),
+    }));
+
 function Sealed() {
   return (
     <div className="body">
@@ -99,7 +111,8 @@ export default function App() {
     if (!profile) return;
     api
       .loadStructure()
-      .then((s) => {
+      .then((res) => {
+        const s = cleanServers(res);
         if (!s.length) throw new Error('Nessun server trovato in wm_servers: esegui supabase/migrations/002_seed.sql.');
         setServers(s);
         if (!srvId) {
@@ -110,7 +123,7 @@ export default function App() {
       .catch((e) => setLoadErr({ what: 'Server e canali', message: e?.message || String(e) }));
     api
       .listPeople()
-      .then((p) => setPeople(p || []))
+      .then((p) => setPeople(list(p).filter((x) => x && x.id)))
       .catch((e) => toast(`Elenco dei membri non caricato: ${e?.message || e}`));
     api.refreshBadges();
     // eslint-disable-next-line
@@ -136,8 +149,8 @@ export default function App() {
   if (!session || !profile) return <Login session={session} onJoined={loadAll} />;
 
   const me = profile;
-  const counts = data.counts;
-  const badges = data.badges;
+  const counts = data.counts || {};
+  const badges = list(data.badges);
   const lv = levelFor(counts);
   const srv = servers.find((s) => s.id === srvId) || servers[0];
   const channels = srv ? srv.categories.flatMap((c) => c.channels) : [];
