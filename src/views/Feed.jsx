@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
-import { Avatar, Loading, run } from '../components/ui.jsx';
+import { Avatar, Loading, run, toast } from '../components/ui.jsx';
 import { fmtDate, relTime } from '../lib/util.js';
 
 const EMOJI = ['❤️', '🔥', '👀', '👍'];
@@ -11,7 +11,14 @@ export default function Feed({ channel, me }) {
   const end = useRef(null);
   const canPost = !channel.ro || me.is_admin;
 
-  const load = () => api.listMessages(channel.id).then(setMsgs).catch(() => setMsgs([]));
+  const load = () =>
+    api
+      .listMessages(channel.id)
+      .then((list) => setMsgs(list || []))
+      .catch((e) => {
+        toast(`Messaggi non caricati: ${e?.message || e}`);
+        setMsgs((cur) => cur || []);
+      });
   useEffect(() => {
     setMsgs(null);
     load();
@@ -28,7 +35,7 @@ export default function Feed({ channel, me }) {
     if (await run(() => api.postMessage(channel.id, t))) load();
   }
   async function react(m, emoji) {
-    const has = m.reactions.some((r) => r.emoji === emoji && r.user_id === me.id);
+    const has = (m.reactions || []).some((r) => r.emoji === emoji && r.user_id === me.id);
     if (await run(() => api.toggleReaction(m.id, emoji, has))) load();
   }
 
@@ -47,7 +54,7 @@ export default function Feed({ channel, me }) {
             const sep = day !== lastDay;
             lastDay = day;
             const groups = {};
-            m.reactions.forEach((r) => (groups[r.emoji] = (groups[r.emoji] || []).concat(r.user_id)));
+            (m.reactions || []).forEach((r) => (groups[r.emoji] = (groups[r.emoji] || []).concat(r.user_id)));
             const emojis = [...new Set([...EMOJI, ...Object.keys(groups)])];
             return (
               <React.Fragment key={m.id}>

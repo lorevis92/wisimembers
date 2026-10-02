@@ -178,7 +178,9 @@ export const real = {
     return must(
       await supabase
         .from('wm_messages')
-        .select('id, body, created_at, user_id, author:wm_profiles(nickname, is_admin, is_finder), reactions:wm_reactions(emoji, user_id)')
+        // L'autore va indicato con il nome del vincolo: tra wm_messages e wm_profiles ci sono due strade
+        // (user_id del messaggio e le reazioni, wm_reactions) e senza indicazione la select fallisce (PGRST201).
+        .select('id, body, created_at, user_id, author:wm_profiles!wm_messages_user_id_fkey(nickname, is_admin, is_finder), reactions:wm_reactions(emoji, user_id)')
         .eq('channel_id', channelId)
         .order('created_at', { ascending: true })
         .limit(200),
@@ -194,12 +196,22 @@ export const real = {
     else must(await supabase.from('wm_reactions').insert({ message_id: messageId, user_id: id, emoji }));
   },
   subscribeMessages(channelId, cb) {
-    const ch = supabase
-      .channel(`msgs-${channelId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wm_messages', filter: `channel_id=eq.${channelId}` }, () => cb())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wm_reactions' }, () => cb())
-      .subscribe();
-    return () => supabase.removeChannel(ch);
+    // Nome unico a ogni iscrizione: Supabase riusa il canale con lo stesso nome, e su un canale già iscritto
+    // .on() lancia un errore, mentre su uno in chiusura subscribe() non fa nulla e la chat resta muta.
+    let ch = null;
+    try {
+      ch = supabase
+        .channel(`msgs-${channelId}-${Math.random().toString(36).slice(2)}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'wm_messages', filter: `channel_id=eq.${channelId}` }, () => cb())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'wm_reactions' }, () => cb())
+        .subscribe();
+    } catch (e) {
+      // Senza aggiornamenti dal vivo la chat funziona lo stesso: non deve cadere tutta l'app.
+      console.error('[realtime]', e);
+    }
+    return () => {
+      if (ch) supabase.removeChannel(ch).catch(() => null);
+    };
   },
   async listPeople() {
     return must(
