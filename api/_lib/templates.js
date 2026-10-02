@@ -8,7 +8,7 @@ function layout({ title, intro, blocks = '', cta }) {
   return `<!doctype html><html><body style="margin:0;background:#F8F8F8;font-family:Helvetica,Arial,sans-serif;color:#111;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8F8F8;padding:24px 12px;"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border:1px solid #E8E8E8;border-radius:6px;">
-<tr><td style="padding:20px 24px;border-bottom:1px solid #E8E8E8;font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:16px;">WISI <span style="color:${RED};font-size:12px;letter-spacing:.1em;">Members</span></td></tr>
+<tr><td style="padding:20px 24px;border-bottom:1px solid #E8E8E8;font-weight:800;letter-spacing:.02em;font-size:16px;">WiSiVERSE <span style="color:${RED};">Members</span></td></tr>
 <tr><td style="padding:28px 24px;">
 <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;line-height:1.25;">${esc(title)}</h1>
 <p style="margin:0 0 18px;font-size:15px;line-height:1.55;color:#333;">${intro}</p>
@@ -64,7 +64,7 @@ export const T = {
       title: 'È partito!',
       intro: 'Il tuo ordine è stato spedito.' + (eta ? ` Consegna stimata: <strong>${esc(eta)}</strong>.` : ''),
       blocks: list(titles),
-      cta: trackingUrl ? { label: 'Segui la spedizione', url: trackingUrl } : { label: 'Apri WISI Members', url: siteUrl },
+      cta: trackingUrl ? { label: 'Segui la spedizione', url: trackingUrl } : { label: 'Apri WiSiVERSE Members', url: siteUrl },
     }),
   }),
 
@@ -121,7 +121,7 @@ export const T = {
   }),
 
   adminNotice: ({ subject, lines, siteUrl }) => ({
-    subject: `[WISI Members] ${subject}`,
+    subject: `[WiSiVERSE Members] ${subject}`,
     html: layout({
       title: subject,
       intro: lines.map(esc).join('<br>'),

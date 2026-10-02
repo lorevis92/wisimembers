@@ -41,6 +41,22 @@ npm run dev
 - **Acquisti**: se un ordine non passa da Printful puoi registrarlo o invitare qualcuno a mano.
 - **Gare**: creale, e a gara finita chiudile (anche in automatico: vedi sotto).
 
+## Logo, icona e immagini (cartella `public/`)
+
+I file in `public/` vengono serviti così come sono. Quelli che l'app si aspetta:
+
+```
+public/logo-members.png        logo nella barra in alto, nell'accesso e negli errori (mostrato alto 32px)
+public/logo-wisiverse.png      logo nel piè di pagina (mostrato alto 32px)
+public/icon.png                icona: favicon, "Aggiungi a Home" su telefono (quadrata, 512×512)
+public/manifest.webmanifest    nome e colori dell'app installata (WiSiVERSE Members)
+public/games/wisinvaders.png   riquadri dei giochi (quadrati, es. 800×800)
+public/games/wisikart.png
+public/games/unbound.png
+```
+
+Se manca il logo compare il nome scritto; se manca l'immagine di un gioco compare un segnaposto.
+
 ## Cambiare le immagini
 
 - **Quadri e prodotti**: dallo Studio, scegli un nuovo file e salva.
