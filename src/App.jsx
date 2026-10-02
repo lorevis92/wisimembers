@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, DEMO } from './lib/api.js';
-import { Avatar, Loading, Logo, Toaster } from './components/ui.jsx';
+import { Avatar, Loading, Logo, Toaster, toast } from './components/ui.jsx';
+import { ErrorCard } from './components/ErrorBoundary.jsx';
 import { levelFor } from '../shared/levels.js';
 import Login, { NewPassword } from './views/Login.jsx';
 import Feed from './views/Feed.jsx';
@@ -40,6 +41,8 @@ export default function App() {
   const [data, setData] = useState(null); // loadMe
   const [loadedFor, setLoadedFor] = useState(null); // utente di cui è già stato caricato il profilo
   const [recovery, setRecovery] = useState(api.recovery.pending); // ritorno da «Password dimenticata»
+  const [loadErr, setLoadErr] = useState(null); // { what, message }: caricamento iniziale fallito
+  const [retry, setRetry] = useState(0);
   const [servers, setServers] = useState([]);
   const [people, setPeople] = useState([]);
   const [srvId, setSrvId] = useState(null);
@@ -53,27 +56,40 @@ export default function App() {
     setData(me);
     return me;
   }, []);
+  // Caricamento iniziale del profilo: se fallisce l'errore si vede, non si finisce sulla schermata del codice.
+  const loadFirst = useCallback(async () => {
+    try {
+      await loadAll();
+    } catch (e) {
+      setData(null);
+      setLoadErr({ what: 'Profilo', message: e?.message || String(e) });
+    }
+  }, [loadAll]);
 
   useEffect(() => {
     let off = api.onAuth((s, event) => {
       setSession(s);
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
     });
-    api.getSession().then(async (s) => {
-      setSession(s);
-      if (s) await loadAll().catch(() => null);
-      setLoadedFor(s?.user?.id || null);
-      setBoot(true);
-    });
+    api
+      .getSession()
+      .then(async (s) => {
+        setSession(s);
+        if (s) await loadFirst();
+        setLoadedFor(s?.user?.id || null);
+      })
+      .catch((e) => setLoadErr({ what: 'Sessione', message: e?.message || String(e) }))
+      .finally(() => setBoot(true));
     return off;
-  }, [loadAll]);
+  }, [loadFirst]);
 
   const userId = session?.user?.id || null;
   useEffect(() => {
-    if (session && boot) loadAll().catch(() => null).finally(() => setLoadedFor(userId));
+    if (session && boot) loadFirst().finally(() => setLoadedFor(userId));
     if (!session) {
       setData(null);
       setLoadedFor(null);
+      setLoadErr(null);
     }
     // eslint-disable-next-line
   }, [userId]);
@@ -81,20 +97,41 @@ export default function App() {
   const profile = data?.profile || null;
   useEffect(() => {
     if (!profile) return;
-    api.loadStructure().then((s) => {
-      setServers(s);
-      if (!srvId && s[0]) {
-        setSrvId(s[0].id);
-        setChId(s[0].categories[0]?.channels[0]?.id || null);
-      }
-    });
-    api.listPeople().then(setPeople).catch(() => null);
+    api
+      .loadStructure()
+      .then((s) => {
+        if (!s.length) throw new Error('Nessun server trovato in wm_servers: esegui supabase/migrations/002_seed.sql.');
+        setServers(s);
+        if (!srvId) {
+          setSrvId(s[0].id);
+          setChId(s[0].categories[0]?.channels[0]?.id || null);
+        }
+      })
+      .catch((e) => setLoadErr({ what: 'Server e canali', message: e?.message || String(e) }));
+    api
+      .listPeople()
+      .then((p) => setPeople(p || []))
+      .catch((e) => toast(`Elenco dei membri non caricato: ${e?.message || e}`));
     api.refreshBadges();
     // eslint-disable-next-line
-  }, [profile?.id]);
+  }, [profile?.id, retry]);
 
   // Dopo il login il profilo si carica un attimo dopo la sessione: nel frattempo niente schermata del codice.
   if (!boot || (session && loadedFor !== userId)) return <div className="shell"><Loading /></div>;
+  if (loadErr) {
+    return (
+      <ErrorCard
+        title="Non riesco a caricare i dati"
+        lead="Il caricamento iniziale non è andato a buon fine. Puoi riprovare, oppure uscire e rientrare."
+        message={`${loadErr.what}: ${loadErr.message}`}
+        onRetry={() => {
+          setLoadErr(null);
+          if (session) loadFirst();
+          setRetry((n) => n + 1);
+        }}
+      />
+    );
+  }
   if (session && recovery) return <NewPassword onDone={() => setRecovery(false)} />;
   if (!session || !profile) return <Login session={session} onJoined={loadAll} />;
 
